@@ -47,8 +47,17 @@ class TestRealResponse:
         assert "62.09" in dto.okved_list
 
     def test_emails_normalized(self, dto):
-        assert len(dto.emails) > 10
+        assert dto.emails
         assert all("@" in e and e == e.lower() for e in dto.emails)
+
+    def test_noisy_contacts_are_trimmed(self, dto):
+        """В живом ответе у Сбербанка 50 почт, почти все — чужие, подтянутые
+        парсером с посторонних сайтов. Отдаём только верхушку."""
+        assert len(dto.emails) <= 5
+
+    def test_egrul_sourced_email_wins(self, dto):
+        """Почта из ЕГРЮЛ достовернее найденной на сайте — она должна быть первой."""
+        assert dto.emails[0] == "gref_p@sberbank.ru"
 
     def test_emails_deduplicated(self, dto):
         assert len(dto.emails) == len(set(dto.emails))

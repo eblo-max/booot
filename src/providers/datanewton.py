@@ -55,6 +55,23 @@ _REGIMES = {
 
 _STATUS = {"active": "active", "liquidating": "liquidating", "liquidated": "liquidated"}
 
+# Контакты приходят из разных источников и сильно различаются по достоверности.
+# На живом ответе видно: у ПАО Сбербанк 50 почт, из них с меткой ЕГРЮЛ одна,
+# остальные подтянуты парсером с сайтов и относятся к посторонним компаниям.
+_SOURCE_RANK = {"ЕГРЮЛ": 0, "Публичные источники": 1, "С сайта компании": 2}
+_MAX_CONTACTS = 5
+
+
+def _rank_contacts(items: list[dict] | None) -> list[str]:
+    """Сортирует по достоверности источника и обрезает хвост."""
+    if not items:
+        return []
+    ordered = sorted(
+        (i for i in items if isinstance(i, dict) and i.get("value")),
+        key=lambda i: _SOURCE_RANK.get(i.get("source_label") or "", 9),
+    )
+    return [i["value"] for i in ordered[:_MAX_CONTACTS]]
+
 
 def _decimal(raw) -> Decimal | None:
     if raw in (None, ""):
@@ -204,8 +221,8 @@ class DataNewtonProvider(CompanyProvider):
             main_okved=main_code,
             okved_list=[o["code"] for o in okveds if o.get("code")],
             manager_name=self._manager(company.get("managers")),
-            phones=normalize_phones([c.get("value") for c in contacts.get("phones") or []]),
-            emails=normalize_emails([c.get("value") for c in contacts.get("emails") or []]),
+            phones=normalize_phones(_rank_contacts(contacts.get("phones"))),
+            emails=normalize_emails(_rank_contacts(contacts.get("emails"))),
             website=self._website(contacts),
             source=self.name,
             raw=response,
@@ -228,9 +245,7 @@ class DataNewtonProvider(CompanyProvider):
         return first.get("fio") or first.get("full_name") or first.get("name")
 
     def _website(self, contacts: dict) -> str | None:
-        sites = contacts.get("sites") or contacts.get("websites") or []
-        for site in sites:
-            value = site.get("value") if isinstance(site, dict) else site
+        for value in _rank_contacts(contacts.get("websites") or contacts.get("sites")):
             normalized = normalize_website(value)
             if normalized:
                 return normalized

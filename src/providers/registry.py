@@ -30,3 +30,22 @@ def build_primary_provider() -> CompanyProvider:
         return CheckoProvider(settings.checko_api_key)
 
     raise RuntimeError(f"Неизвестный PRIMARY_PROVIDER: {settings.primary_provider}")
+
+
+def build_lookup_provider() -> CompanyProvider:
+    """Провайдер для точечных запросов по ИНН/ОГРН (/company, «Проверить повторно»).
+
+    Массовый поиск может быть недоступен по тарифу, но карточка по одному ИНН
+    работает — поэтому источник здесь выбирается отдельно от PRIMARY_PROVIDER.
+    """
+    if settings.datanewton_api_key:
+        from src.providers.datanewton import DataNewtonProvider
+
+        return DataNewtonProvider(settings.datanewton_api_key)
+
+    if settings.checko_api_key:
+        from src.providers.checko import CheckoProvider
+
+        return CheckoProvider(settings.checko_api_key)
+
+    return build_primary_provider()

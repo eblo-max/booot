@@ -1,4 +1,4 @@
-import structlog
+﻿import structlog
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
@@ -70,9 +70,9 @@ async def cb_info(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("co:recheck:"))
 async def cb_recheck(callback: CallbackQuery) -> None:
     result_id = int(callback.data.split(":")[2])
-    from src.providers.registry import build_primary_provider
+    from src.providers.registry import build_lookup_provider
 
-    provider = build_primary_provider()
+    provider = build_lookup_provider()
     try:
         async with session_scope() as session:
             row = await repo.get_result_by_id(session, result_id)
@@ -98,9 +98,9 @@ async def cmd_company(message: Message) -> None:
         await message.answer("Укажите ИНН или ОГРН: <code>/company 7707083893</code>")
         return
 
-    from src.providers.registry import build_primary_provider
+    from src.providers.registry import build_lookup_provider
 
-    provider = build_primary_provider()
+    provider = build_lookup_provider()
     try:
         company = await provider.get_company(parts[1].strip())
     finally:
