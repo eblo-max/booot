@@ -28,6 +28,7 @@ COMMANDS = [
 
 async def main() -> None:
     setup_logging()
+    print("[bot] процесс запущен, инициализирую aiogram", flush=True)
 
     bot = Bot(
         token=settings.bot_token,
@@ -47,9 +48,18 @@ async def main() -> None:
 
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        # сюда попадаем только при штатной остановке polling — на Railway это аномалия
+        log.warning("polling_stopped_unexpectedly")
     finally:
         await bot.session.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception:
+        # без этого падение до настройки логов уходит в пустоту
+        import traceback
+
+        traceback.print_exc()
+        raise

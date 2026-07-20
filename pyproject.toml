@@ -17,6 +17,16 @@ dependencies = [
     "tenacity>=9.0",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# без явного указания setuptools раскладывал src/* как top-level пакеты
+# и в образе появлялась теневая копия кода рядом с настоящей
+where = ["."]
+include = ["src*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",

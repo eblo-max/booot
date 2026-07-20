@@ -12,5 +12,7 @@ RUN pip install --upgrade pip && pip install .
 COPY src ./src
 COPY migrations ./migrations
 COPY alembic.ini ./
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
-CMD ["sh", "-c", "alembic upgrade head && python -m src.main_bot"]
+CMD ["./docker-entrypoint.sh"]
