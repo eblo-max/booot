@@ -89,7 +89,11 @@ async def cmd_status(message: Message) -> None:
             session, message.from_user.id, message.from_user.username
         )
         queries = await repo.list_queries(session, user.id)
-        lines += await _opendata_lines(session)
+        try:
+            lines += await _opendata_lines(session)
+        except Exception as exc:  # noqa: BLE001 — /status обязан отвечать всегда
+            log.warning("opendata_status_failed", error=str(exc))
+            lines += ["", f"<b>Открытые данные ФНС</b>: ошибка чтения состояния ({exc})"]
 
     active = sum(1 for q in queries if q.is_active)
     lines.append(f"\nЗапросов: {len(queries)}, из них активных: {active}")
@@ -143,20 +147,23 @@ async def _opendata_lines(session) -> list[str]:
     from src.opendata.datasets import ACTIVE_DATASETS
 
     lines = ["", "<b>Открытые данные ФНС</b>"]
+    loaded_any = False
+
     for spec in ACTIVE_DATASETS:
         state = await session.get(FnsDataset, spec.code)
         if state is None or not state.loaded_at:
-            lines.append(f"• {spec.title}: не загружен")
+            status = "загружается…" if state is not None else "не загружен"
+            lines.append(f"• {spec.title}: {status}")
             continue
+        loaded_any = True
         mark = "✅" if state.is_complete else "⚠️ неполный"
+        count = f"{state.records_count:,}".replace(",", " ")
         lines.append(
-            f"• {spec.title}: {mark}, записей {state.records_count:,}".replace(",", " ")
-            + f", данные на {state.actual_date or '—'}"
+            f"• {spec.title}: {mark}, записей {count}, данные на {state.actual_date or '—'}"
         )
-    if all(
-        (await session.get(FnsDataset, s.code)) is None for s in ACTIVE_DATASETS
-    ):
-        lines.append("<i>Пока индекс пуст — налоговый режим будет «неизвестен».</i>")
+
+    if not loaded_any:
+        lines.append("<i>Индекс пуст — налоговый режим будет «неизвестен».</i>")
     return lines
 
 
