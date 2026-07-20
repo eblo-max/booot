@@ -33,14 +33,27 @@ _PHONE_RE = re.compile(r"(?:\+7|8)[\s\-(]*\d{3}[\s\-)]*\d{3}[\s\-]*\d{2}[\s\-]*\
 
 SYSTEM = """Ты помогаешь проверять российские компании по открытым источникам.
 
+Порядок работы:
+1. Найди поиском официальный сайт компании.
+2. ОБЯЗАТЕЛЬНО открой инструментом web_fetch главную страницу сайта и
+   страницу контактов. Одного поиска недостаточно: контакты почти всегда
+   лежат на странице, а не в поисковой выдаче.
+3. Выпиши почты и телефоны дословно оттуда.
+
 Жёсткие правила:
-1. Переписывай контакты ТОЛЬКО дословно со страниц, которые ты открыл.
-2. Никогда не достраивай и не угадывай адрес по названию компании или домену.
-   Если почты на странице нет — оставь список пустым.
-3. Для каждого контакта укажи URL страницы, где он написан.
-4. Если нашёл контакты другой организации — не включай их.
+- Переписывай контакты ТОЛЬКО дословно с открытых страниц или из текста
+  поисковой выдачи. Никогда не достраивай адрес по названию или домену.
+- Для каждого контакта укажи URL, где он написан.
+- Не включай контакты других организаций.
+
+Про not_found: ставь true ТОЛЬКО если найденная организация — заведомо
+другая компания (не совпадает название или ИНН). Неуверенность, скудость
+данных или отсутствие контактов — это НЕ not_found: верни то, что нашёл,
+даже если это только описание деятельности.
 
 Отсутствие данных — нормальный результат. Выдуманные данные — брак."""
+
+SUBMIT_TOOL_NAME = "submit_findings"
 
 SCHEMA = {
     "type": "object",
@@ -80,6 +93,19 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
+# Результат собирается инструментом, а не output_config.format: принудительный
+# структурированный вывод обрывал агентный цикл — модель спешила выдать JSON по
+# схеме и ни разу не доходила до web_fetch (проверено на живом API).
+SUBMIT_TOOL = {
+    "name": SUBMIT_TOOL_NAME,
+    "description": (
+        "Вызови ОДИН раз в самом конце, когда уже открыл сайт компании и страницу "
+        "контактов. Передай найденное. Не вызывай, пока не поработал инструментами."
+    ),
+    "strict": True,
+    "input_schema": SCHEMA,
+}
+
 
 @dataclass
 class VerifiedContact:
@@ -98,7 +124,12 @@ class ResearchResult:
     signals: list[str] = field(default_factory=list)
     discarded: list[str] = field(default_factory=list)  # что отбраковали как выдуманное
     pages_read: int = 0
+    uncertain: bool = False  # модель не уверена, что нашла именно эту компанию
     error: str | None = None
+    # что реально сделала модель — видно в логах и помогает диагностировать пустой ответ
+    searches: int = 0
+    fetches: int = 0
+    input_tokens: int = 0
 
     @property
     def ok(self) -> bool:
@@ -167,41 +198,83 @@ class WebResearcher:
         collected_text: list[str] = []
         response = None
 
+        raw: dict | None = None
         try:
-            for _ in range(MAX_TOOL_ROUNDS):
+            for attempt in range(MAX_TOOL_ROUNDS):
                 response = await self.client.messages.create(
                     model=self.model,
                     max_tokens=8000,
                     system=SYSTEM,
                     thinking={"type": "adaptive"},
-                    output_config={
-                        "effort": "medium",
-                        "format": {"type": "json_schema", "schema": SCHEMA},
-                    },
+                    # на medium модель ограничивалась поиском и не открывала страницы
+                    output_config={"effort": "high"},
                     tools=[
-                        {"type": "web_search_20260209", "name": "web_search", "max_uses": 6},
-                        {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 6},
+                        # поиск дорогой: две выдачи дают ~200 тыс. входных токенов,
+                        # поэтому ограничиваем его и переносим работу на загрузку страниц
+                        {"type": "web_search_20260209", "name": "web_search", "max_uses": 3},
+                        {
+                            "type": "web_fetch_20260209",
+                            "name": "web_fetch",
+                            "max_uses": 5,
+                            "max_content_tokens": 20000,
+                        },
+                        SUBMIT_TOOL,
                     ],
                     messages=messages,
                 )
                 collected_text.append(collect_source_text(self._dump(response)))
 
-                if response.stop_reason != "pause_turn":
-                    break
-                # серверный инструмент упёрся в лимит итераций — продолжаем ту же реплику
-                messages = messages[:1] + [{"role": "assistant", "content": response.content}]
+                if response.stop_reason == "refusal":
+                    return ResearchResult(error="Запрос отклонён политиками безопасности модели")
 
-            if response is not None and response.stop_reason == "refusal":
-                return ResearchResult(error="Запрос отклонён политиками безопасности модели")
+                raw = self._find_submission(response)
+                if raw is not None:
+                    break
+
+                messages = messages[:1] + [{"role": "assistant", "content": response.content}]
+                if response.stop_reason == "pause_turn":
+                    # серверный инструмент упёрся в лимит итераций — продолжаем реплику
+                    continue
+                if attempt < MAX_TOOL_ROUNDS - 1:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Заверши работу: вызови {SUBMIT_TOOL_NAME} с тем, "
+                                "что удалось найти."
+                            ),
+                        }
+                    )
         except Exception as exc:  # noqa: BLE001 — падение поиска не должно ронять бота
             log.warning("web_research_failed", inn=company.inn, error=str(exc))
             return ResearchResult(error=f"{type(exc).__name__}: {exc}")
 
-        raw = self._extract_json(response)
         if raw is None:
-            return ResearchResult(error="Модель не вернула структурированный ответ")
+            return ResearchResult(error="Модель не передала результат")
 
-        return self._verify(raw, "\n".join(collected_text), company)
+        result = self._verify(raw, "\n".join(collected_text), company)
+        self._attach_usage(result, response)
+        log.info(
+            "web_research_done",
+            inn=company.inn,
+            emails=len(result.emails),
+            discarded=len(result.discarded),
+            searches=result.searches,
+            fetches=result.fetches,
+            uncertain=result.uncertain,
+            input_tokens=result.input_tokens,
+        )
+        return result
+
+    def _attach_usage(self, result: ResearchResult, response) -> None:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return
+        result.input_tokens = getattr(usage, "input_tokens", 0) or 0
+        tools = getattr(usage, "server_tool_use", None)
+        if tools is not None:
+            result.searches = getattr(tools, "web_search_requests", 0) or 0
+            result.fetches = getattr(tools, "web_fetch_requests", 0) or 0
 
     def _dump(self, response) -> Any:
         for attr in ("model_dump", "to_dict"):
@@ -210,22 +283,26 @@ class WebResearcher:
                 return method()
         return response
 
-    def _extract_json(self, response) -> dict | None:
+    def _find_submission(self, response) -> dict | None:
+        """Находит вызов submit_findings — им модель отдаёт итог."""
         for block in getattr(response, "content", []) or []:
-            if getattr(block, "type", None) != "text":
+            if getattr(block, "type", None) != "tool_use":
                 continue
-            try:
-                return json.loads(block.text)
-            except (ValueError, AttributeError):
+            if getattr(block, "name", None) != SUBMIT_TOOL_NAME:
                 continue
+            payload = getattr(block, "input", None)
+            if isinstance(payload, dict):
+                return payload
+            if isinstance(payload, str):
+                try:
+                    return json.loads(payload)
+                except ValueError:
+                    return None
         return None
 
     # --- проверка -----------------------------------------------------------
 
     def _verify(self, raw: dict, corpus: str, company: CompanyDTO) -> ResearchResult:
-        if raw.get("not_found"):
-            return ResearchResult(activity="", signals=[])
-
         site = normalize_website(raw.get("website")) or company.website
         site_domain = site.split("/")[0] if site else None
 
@@ -241,6 +318,9 @@ class WebResearcher:
             activity=(raw.get("activity") or "").strip()[:600],
             signals=[s.strip() for s in (raw.get("signals") or []) if s.strip()][:5],
             pages_read=corpus.count("http"),
+            # модель считает, что нашла другую организацию; результат показываем,
+            # но помечаем — раньше этот флаг молча стирал проверенные контакты
+            uncertain=bool(raw.get("not_found")),
         )
 
         for item in raw.get("emails") or []:

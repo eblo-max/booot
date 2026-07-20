@@ -97,6 +97,13 @@ def _format_research(company_name: str, result) -> str:
 
     lines = [f"🔍 <b>Веб-разведка: {company_name}</b>", ""]
 
+    if result.uncertain:
+        lines += [
+            "⚠️ <i>Модель не уверена, что нашла именно эту компанию — "
+            "сверьте название и сайт перед использованием.</i>",
+            "",
+        ]
+
     if result.emails:
         lines.append("<b>Почты со страниц компании</b>")
         for contact in result.emails:
@@ -128,7 +135,11 @@ def _format_research(company_name: str, result) -> str:
             "Этих контактов не было ни на одной открытой странице.</i>",
         ]
 
-    lines += ["", "<i>✅ — домен почты совпадает с сайтом компании.</i>"]
+    lines += [
+        "",
+        f"<i>✅ — домен почты совпадает с сайтом. "
+        f"Поисков: {result.searches}, страниц открыто: {result.fetches}.</i>",
+    ]
     return "\n".join(lines)
 
 

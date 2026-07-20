@@ -5,7 +5,6 @@
 выглядит достовернее мусорной и тише отравляет базу.
 """
 
-import json
 
 import pytest
 
@@ -13,16 +12,28 @@ from src.domain.company import CompanyDTO
 from src.services.web_research import WebResearcher, collect_source_text
 
 
-class FakeBlock:
-    def __init__(self, text: str):
-        self.type = "text"
-        self.text = text
+class SubmitBlock:
+    """Итог модель отдаёт вызовом инструмента, а не текстом."""
+
+    def __init__(self, payload: dict):
+        self.type = "tool_use"
+        self.name = "submit_findings"
+        self.input = payload
+
+
+class FakeUsage:
+    def __init__(self):
+        self.input_tokens = 1000
+        self.server_tool_use = type(
+            "T", (), {"web_search_requests": 2, "web_fetch_requests": 1}
+        )()
 
 
 class FakeResponse:
-    def __init__(self, payload: dict, sources: dict, stop_reason: str = "end_turn"):
-        self.content = [FakeBlock(json.dumps(payload, ensure_ascii=False))]
+    def __init__(self, payload: dict, sources: dict, stop_reason: str = "tool_use"):
+        self.content = [SubmitBlock(payload)] if payload else []
         self.stop_reason = stop_reason
+        self.usage = FakeUsage()
         self._sources = sources
 
     def model_dump(self):
@@ -148,20 +159,24 @@ class TestRanking:
 
 
 class TestOutcomes:
-    async def test_not_found_returns_empty(self):
+    async def test_not_found_marks_uncertain_but_keeps_findings(self):
+        """Регрессия: раньше not_found стирал контакты, которые реально были
+        на странице, и пользователь видел «почт не нашлось» при найденных почтах."""
         researcher = make(
             {
-                "emails": [{"value": "a@b.ru", "source_url": "", "note": ""}],
+                "emails": [{"value": "a@b.ru", "source_url": "http://x", "note": ""}],
                 "phones": [],
                 "website": "",
                 "activity": "",
                 "signals": [],
                 "not_found": True,
             },
-            page_text="a@b.ru",
+            page_text="пишите на a@b.ru",
         )
         result = await researcher.research(company())
-        assert result.emails == [] and result.ok
+        assert [e.value for e in result.emails] == ["a@b.ru"]
+        assert result.uncertain is True
+        assert result.ok
 
     async def test_activity_and_signals_captured(self):
         researcher = make(
@@ -210,12 +225,46 @@ class TestRequestShape:
         kwargs = researcher.client.messages.last_kwargs
 
         assert kwargs["model"] == "claude-sonnet-5"
-        tool_types = {t["type"] for t in kwargs["tools"]}
-        assert "web_search_20260209" in tool_types
-        assert "web_fetch_20260209" in tool_types
-        # на Sonnet 5 параметры сэмплирования отвергаются
+        # у пользовательского инструмента ключа type нет — только name
+        by_type = {t["type"]: t for t in kwargs["tools"] if "type" in t}
+        assert "web_search_20260209" in by_type
+        assert "web_fetch_20260209" in by_type
+        # поиск дороже загрузки страниц — лимитов должно быть больше на fetch
+        assert by_type["web_search_20260209"]["max_uses"] < by_type["web_fetch_20260209"]["max_uses"]
+        assert by_type["web_fetch_20260209"]["max_content_tokens"] <= 20000
+        # на medium модель не открывала страницы вовсе
+        assert kwargs["output_config"]["effort"] == "high"
+        # на Sonnet 5 параметры сэмплирования отвергаются API
         assert "temperature" not in kwargs and "top_p" not in kwargs
         assert kwargs["thinking"] == {"type": "adaptive"}
+
+    async def test_result_is_collected_by_tool_not_forced_format(self):
+        """Регрессия: output_config.format обрывал агентный цикл — модель спешила
+        выдать JSON по схеме и ни разу не вызывала web_fetch."""
+        researcher = make(
+            {
+                "emails": [], "phones": [], "website": "",
+                "activity": "", "signals": [], "not_found": False,
+            },
+            page_text="",
+        )
+        await researcher.research(company())
+        kwargs = researcher.client.messages.last_kwargs
+
+        assert "format" not in kwargs.get("output_config", {})
+        assert any(t.get("name") == "submit_findings" for t in kwargs["tools"])
+
+    async def test_usage_is_recorded(self):
+        researcher = make(
+            {
+                "emails": [], "phones": [], "website": "",
+                "activity": "", "signals": [], "not_found": False,
+            },
+            page_text="",
+        )
+        result = await researcher.research(company())
+        assert result.searches == 2 and result.fetches == 1
+        assert result.input_tokens == 1000
 
     async def test_prompt_contains_identifiers(self):
         researcher = make(
