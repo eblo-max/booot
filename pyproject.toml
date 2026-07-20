@@ -1,0 +1,38 @@
+[project]
+name = "company-search-bot"
+version = "0.1.0"
+description = "Telegram bot for automated search of Russian legal entities"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.15",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "structlog>=24.4",
+    "httpx>=0.28",
+    "openpyxl>=3.1",
+    "apscheduler>=3.11",
+    "tenacity>=9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+# кириллица в строках делает строки длиннее — 110 практичнее стандартных 100
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

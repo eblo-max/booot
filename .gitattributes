@@ -1,0 +1,4 @@
+# В образ и на Railway всё уезжает с LF, иначе sh -c в Dockerfile ломается на CRLF
+* text=auto eol=lf
+*.png binary
+*.xlsx binary
