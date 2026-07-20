@@ -44,6 +44,20 @@ async def create_query(
     return query
 
 
+async def update_query(
+    session: AsyncSession, query_id: int, name: str, criteria: SearchCriteria
+) -> None:
+    await session.execute(
+        update(SearchQuery)
+        .where(SearchQuery.id == query_id)
+        .values(
+            name=name,
+            criteria_json=criteria.model_dump(mode="json"),
+            schedule=criteria.schedule,
+        )
+    )
+
+
 async def list_queries(session: AsyncSession, user_id: int) -> list[SearchQuery]:
     return list(
         await session.scalars(

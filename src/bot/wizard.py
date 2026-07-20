@@ -2,6 +2,9 @@
 
 Каждый шаг — данные, а не отдельный обработчик: набор кнопок с готовыми значениями
 плюс возможность ввести ответ текстом. Парсер поднимает ValueError с подсказкой.
+
+Шаги с multi=True накапливают список значений: кнопка переключает элемент,
+"Готово" завершает шаг.
 """
 
 from collections.abc import Callable
@@ -11,17 +14,17 @@ from decimal import Decimal, InvalidOperation
 
 from src.domain.normalize import normalize_okved
 
-SKIP = "__skip__"
-
 
 @dataclass
 class Step:
     key: str
+    title: str  # короткая подпись для экрана редактирования
     prompt: str
     options: list[tuple[str, object]] = field(default_factory=list)
     parse: Callable[[str], object] | None = None
     hint: str = ""
     columns: int = 2
+    multi: bool = False
 
 
 def _parse_name(text: str) -> str:
@@ -41,10 +44,10 @@ def _parse_regions(text: str) -> list[str]:
     return codes
 
 
-def _parse_date(text: str) -> date | None:
-    text = text.strip()
+def _parse_one_date(raw: str) -> date:
+    raw = raw.strip()
     for sep in (".", "-", "/"):
-        parts = text.split(sep)
+        parts = raw.split(sep)
         if len(parts) == 3:
             try:
                 d, m, y = (int(x) for x in parts)
@@ -54,6 +57,34 @@ def _parse_date(text: str) -> date | None:
             except ValueError:
                 break
     raise ValueError("Дата в формате ДД.ММ.ГГГГ, например 01.01.2020.")
+
+
+def _parse_reg_period(text: str) -> dict:
+    """Принимает диапазон «01.01.2020-31.12.2025» или «последние 30 дней»."""
+    cleaned = text.strip().lower().replace("—", "-").replace("–", "-")
+
+    digits = "".join(ch for ch in cleaned if ch.isdigit())
+    if "дн" in cleaned and digits:
+        days = int(digits)
+        if not 1 <= days <= 3650:
+            raise ValueError("Количество дней — от 1 до 3650.")
+        return {"mode": "relative", "days": days}
+
+    parts = [p.strip() for p in cleaned.split("-") if p.strip()]
+    # дата сама содержит дефисы, поэтому разбор через дефис делаем только для точек
+    if cleaned.count(".") >= 2:
+        halves = cleaned.split("-")
+        if len(halves) == 2:
+            return {
+                "mode": "absolute",
+                "from": _parse_one_date(halves[0]),
+                "to": _parse_one_date(halves[1]),
+            }
+        if len(parts) == 1:
+            return {"mode": "absolute", "from": _parse_one_date(parts[0]), "to": None}
+    raise ValueError(
+        "Укажите диапазон «01.01.2020-31.12.2025» или относительный период «последние 30 дней»."
+    )
 
 
 def _parse_okved(text: str) -> list[str]:
@@ -76,19 +107,30 @@ def _parse_year(text: str) -> int:
     return int(text)
 
 
+def _parse_money(raw: str) -> Decimal:
+    try:
+        return Decimal(raw.replace(" ", "").replace("_", ""))
+    except InvalidOperation as exc:
+        raise ValueError("Только цифры, например 5000000") from exc
+
+
 def _parse_revenue(text: str) -> tuple[Decimal | None, Decimal | None]:
     cleaned = text.replace(" ", "").replace("_", "").replace("—", "-").replace("–", "-")
     parts = cleaned.split("-")
     if len(parts) != 2:
         raise ValueError("Диапазон через дефис: 5000000-500000000")
-    try:
-        low = Decimal(parts[0]) if parts[0] else None
-        high = Decimal(parts[1]) if parts[1] else None
-    except InvalidOperation as exc:
-        raise ValueError("Только цифры и дефис: 5000000-500000000") from exc
+    low = _parse_money(parts[0]) if parts[0] else None
+    high = _parse_money(parts[1]) if parts[1] else None
     if low is not None and high is not None and low > high:
         raise ValueError("Нижняя граница больше верхней.")
     return low, high
+
+
+def _parse_profit(text: str) -> Decimal | None:
+    cleaned = text.strip().lower()
+    if cleaned in ("не важно", "любая", "-"):
+        return None
+    return _parse_money(cleaned)
 
 
 def _parse_limit(text: str) -> int:
@@ -101,13 +143,15 @@ def _parse_limit(text: str) -> int:
 STEPS: list[Step] = [
     Step(
         key="name",
-        prompt="<b>Шаг 1/13.</b> Как назовём запрос?",
+        title="Название",
+        prompt="Как назовём запрос?",
         hint="Например: Строительные ООО Москвы",
         parse=_parse_name,
     ),
     Step(
         key="regions",
-        prompt="<b>Шаг 2/13.</b> Регион?",
+        title="Регион",
+        prompt="Регион?",
         options=[
             ("Москва", ["77"]),
             ("Московская обл.", ["50"]),
@@ -120,43 +164,54 @@ STEPS: list[Step] = [
     ),
     Step(
         key="status",
-        prompt="<b>Шаг 3/13.</b> Статус компаний?",
+        title="Статус",
+        prompt="Статус компаний?",
         options=[
-            ("Только действующие", ["active"]),
-            ("Действующие + ликвидируемые", ["active", "liquidating"]),
-            ("Любой", []),
+            ("Действующие", "active"),
+            ("Ликвидируемые", "liquidating"),
+            ("Ликвидированные", "liquidated"),
+            ("Реорганизуемые", "reorganizing"),
         ],
-        columns=1,
+        multi=True,
+        hint="Отметьте нужные и нажмите «Готово». Ничего не выбрано — статус не важен.",
     ),
     Step(
         key="opf",
-        prompt="<b>Шаг 4/13.</b> Организационно-правовая форма?",
+        title="ОПФ",
+        prompt="Организационно-правовая форма?",
         options=[
-            ("ООО", ["ООО"]),
-            ("АО", ["АО"]),
-            ("ООО + АО", ["ООО", "АО"]),
-            ("ИП", ["ИП"]),
-            ("Любая", []),
+            ("ООО", "ООО"),
+            ("АО", "АО"),
+            ("ПАО", "ПАО"),
+            ("НАО", "НАО"),
+            ("ИП", "ИП"),
         ],
+        multi=True,
+        hint="Отметьте нужные и нажмите «Готово». Ничего не выбрано — форма не важна.",
     ),
     Step(
-        key="reg_date_from",
-        prompt="<b>Шаг 5/13.</b> Дата регистрации — начало периода?",
-        options=[("Не важно", None)],
-        parse=_parse_date,
-        hint="Формат ДД.ММ.ГГГГ, например 01.01.2020",
-        columns=1,
-    ),
-    Step(
-        key="reg_date_to",
-        prompt="<b>Шаг 6/13.</b> Дата регистрации — конец периода?",
-        options=[("Не важно", None), ("Сегодня", date.today())],
-        parse=_parse_date,
-        hint="Формат ДД.ММ.ГГГГ, например 31.12.2025",
+        key="reg_period",
+        title="Период регистрации",
+        prompt="Дата регистрации?",
+        options=[
+            ("Последние 7 дней", {"mode": "relative", "days": 7}),
+            ("Последние 30 дней", {"mode": "relative", "days": 30}),
+            ("Последние 90 дней", {"mode": "relative", "days": 90}),
+            ("Последний год", {"mode": "relative", "days": 365}),
+            ("Не важно", None),
+        ],
+        parse=_parse_reg_period,
+        hint=(
+            "Относительный период пересчитывается при каждом запуске — "
+            "для ежедневного мониторинга берите его.\n"
+            "Свой диапазон: 01.01.2020-31.12.2025"
+        ),
+        columns=2,
     ),
     Step(
         key="okved_main",
-        prompt="<b>Шаг 7/13.</b> Основные ОКВЭД?",
+        title="ОКВЭД",
+        prompt="Коды ОКВЭД?",
         options=[("Не важно", [])],
         parse=_parse_okved,
         hint="Через запятую: 41.20, 41.10, 42.11, 43.11, 43.12, 43.21\n"
@@ -164,14 +219,27 @@ STEPS: list[Step] = [
         columns=1,
     ),
     Step(
+        key="okved_match_mode",
+        title="Где искать ОКВЭД",
+        prompt="Где проверять коды ОКВЭД?",
+        options=[
+            ("Только основной", "main_only"),
+            ("Основной или дополнительные", "main_or_additional"),
+        ],
+        hint="По дополнительным находится заметно больше компаний, но выдача менее точная.",
+        columns=1,
+    ),
+    Step(
         key="financial_year",
-        prompt="<b>Шаг 8/13.</b> За какой год смотреть финансы?",
+        title="Финансовый год",
+        prompt="За какой год смотреть финансы?",
         options=[("2025", 2025), ("2024", 2024), ("2023", 2023), ("Не важно", None)],
         parse=_parse_year,
     ),
     Step(
         key="revenue",
-        prompt="<b>Шаг 9/13.</b> Выручка, диапазон в рублях?",
+        title="Выручка",
+        prompt="Выручка, диапазон в рублях?",
         options=[
             ("5 млн — 500 млн", (Decimal("5000000"), Decimal("500000000"))),
             ("от 100 млн", (Decimal("100000000"), None)),
@@ -182,17 +250,38 @@ STEPS: list[Step] = [
         columns=1,
     ),
     Step(
-        key="contacts_required",
-        prompt="<b>Шаг 10/13.</b> Нужны контакты?",
+        key="profit_min",
+        title="Прибыль",
+        prompt="Минимальная чистая прибыль?",
         options=[
-            ("Обязательно", "required"),
-            ("Желательно", "preferred"),
-            ("Не важно", "no"),
+            ("Не важно", None),
+            ("от 1 млн", Decimal("1000000")),
+            ("от 5 млн", Decimal("5000000")),
+            ("Только прибыльные", Decimal("1")),
         ],
+        parse=_parse_profit,
+        hint="Или введите число: 2500000",
+    ),
+    Step(
+        key="contacts",
+        title="Контакты",
+        prompt="Какие контакты обязательны?",
+        options=[
+            ("Телефон", "phone"),
+            ("E-mail", "email"),
+            ("Сайт", "website"),
+            ("Любой контакт", "any"),
+        ],
+        multi=True,
+        hint=(
+            "Отметьте обязательные и нажмите «Готово».\n"
+            "Ничего не выбрано — контакты желательны, но не обязательны."
+        ),
     ),
     Step(
         key="special_tax_regimes",
-        prompt="<b>Шаг 11/13.</b> Специальные налоговые режимы (УСН, АУСН, ЕСХН)?",
+        title="Спецрежимы",
+        prompt="Специальные налоговые режимы (УСН, АУСН, ЕСХН)?",
         options=[
             ("Исключить", "exclude"),
             ("Допустимы", "allow"),
@@ -201,16 +290,26 @@ STEPS: list[Step] = [
         columns=1,
     ),
     Step(
+        key="allow_unknown_tax_status",
+        title="Неизвестный режим",
+        prompt="Что делать с компаниями, у которых налоговый режим не удалось определить?",
+        options=[("Показывать с пометкой", True), ("Отсеивать", False)],
+        hint="Источник не всегда отдаёт данные о режиме. Отсев даёт точность ценой охвата.",
+        columns=1,
+    ),
+    Step(
         key="schedule",
-        prompt="<b>Шаг 12/13.</b> Как часто проверять?",
+        title="Периодичность",
+        prompt="Как часто проверять?",
         options=[("Ежедневно", "daily"), ("Раз в неделю", "weekly"), ("Только вручную", "manual")],
     ),
     Step(
         key="max_results_per_run",
-        prompt="<b>Шаг 13/13.</b> Максимум результатов за один запуск?",
+        title="Лимит за запуск",
+        prompt="Максимум результатов за один запуск?",
         options=[("10", 10), ("25", 25), ("50", 50), ("100", 100)],
         parse=_parse_limit,
     ),
 ]
 
-STEP_BY_KEY = {s.key: s for s in STEPS}
+STEP_INDEX = {s.key: i for i, s in enumerate(STEPS)}

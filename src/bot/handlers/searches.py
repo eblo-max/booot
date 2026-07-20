@@ -176,14 +176,6 @@ async def cb_results(callback: CallbackQuery, bot: Bot) -> None:
         await delivery.send_items(bot, callback.from_user.id, items, query.name, session)
 
 
-@router.callback_query(F.data.startswith("q:edit:"))
-async def cb_edit(callback: CallbackQuery) -> None:
-    await callback.answer(
-        "Редактирование появится на следующем этапе. Пока создайте новый запрос через /new_search.",
-        show_alert=True,
-    )
-
-
 @router.callback_query(F.data.startswith("q:export:"))
 async def cb_export(callback: CallbackQuery) -> None:
     await callback.answer("Выгрузка в Excel — этап 3.", show_alert=True)

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -127,6 +127,74 @@ class TestContacts:
         company.phones = []
         company.emails = []
         assert CriteriaMatcher(criteria).match(company)
+
+
+class TestSpecificContacts:
+    def test_phone_required(self, criteria, company):
+        criteria.require_phone = True
+        company.phones = []
+        company.emails = ["a@b.ru"]
+        assert "phone" in CriteriaMatcher(criteria).match(company).failed
+
+    def test_email_required(self, criteria, company):
+        criteria.require_email = True
+        company.emails = []
+        assert "email" in CriteriaMatcher(criteria).match(company).failed
+
+    def test_website_required(self, criteria, company):
+        criteria.require_website = True
+        company.website = None
+        assert "website" in CriteriaMatcher(criteria).match(company).failed
+
+    def test_all_present_passes(self, criteria, company):
+        criteria.require_phone = criteria.require_email = criteria.require_website = True
+        company.phones = ["+74951234567"]
+        company.emails = ["a@b.ru"]
+        company.website = "b.ru"
+        assert CriteriaMatcher(criteria).match(company)
+
+
+class TestRelativeRegistrationWindow:
+    def test_recent_company_matches(self, company):
+        c = SearchCriteria(opf=[], status=[], regions=[], reg_last_days=30)
+        company.registration_date = date.today() - timedelta(days=5)
+        assert CriteriaMatcher(c).match(company)
+
+    def test_old_company_rejected(self, company):
+        c = SearchCriteria(opf=[], status=[], regions=[], reg_last_days=30)
+        company.registration_date = date.today() - timedelta(days=100)
+        assert "registration_date" in CriteriaMatcher(c).match(company).failed
+
+    def test_window_edge_is_inclusive(self, company):
+        c = SearchCriteria(opf=[], status=[], regions=[], reg_last_days=30)
+        company.registration_date = date.today() - timedelta(days=30)
+        assert CriteriaMatcher(c).match(company)
+
+
+class TestOkvedMatchMode:
+    def test_main_only_ignores_additional(self, criteria, company):
+        company.main_okved = "68.20"
+        company.okved_list = ["68.20", "41.20"]
+        assert "okved" in CriteriaMatcher(criteria).match(company).failed
+
+    def test_additional_mode_accepts_secondary_code(self, criteria, company):
+        criteria.okved_match_mode = "main_or_additional"
+        company.main_okved = "68.20"
+        company.okved_list = ["68.20", "41.20"]
+        assert CriteriaMatcher(criteria).match(company)
+
+
+class TestProfitThreshold:
+    def test_below_threshold_rejected(self, criteria, company):
+        criteria.profit_min = Decimal("5000000")
+        company.profit = Decimal("4300000")
+        assert "profit" in CriteriaMatcher(criteria).match(company).failed
+
+    def test_missing_profit_is_unverified(self, criteria, company):
+        criteria.profit_min = Decimal("5000000")
+        company.profit = None
+        result = CriteriaMatcher(criteria).match(company)
+        assert result.matched and "profit" in result.unverified
 
 
 class TestOpfDetection:

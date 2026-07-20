@@ -91,14 +91,16 @@ class CriteriaMatcher:
             failed.append("region")
 
     def _check_reg_date(self, c: CompanyDTO, failed, unverified) -> None:
-        if not (self.c.reg_date_from or self.c.reg_date_to):
+        # относительное окно раскрывается здесь, на момент запуска
+        date_from, date_to = self.c.effective_reg_range()
+        if not (date_from or date_to):
             return
         if not c.registration_date:
             unverified.append("registration_date")
             return
-        if self.c.reg_date_from and c.registration_date < self.c.reg_date_from:
+        if date_from and c.registration_date < date_from:
             failed.append("registration_date")
-        if self.c.reg_date_to and c.registration_date > self.c.reg_date_to:
+        if date_to and c.registration_date > date_to:
             failed.append("registration_date")
 
     def _check_okved(self, c: CompanyDTO, failed, unverified) -> None:
@@ -142,6 +144,12 @@ class CriteriaMatcher:
     def _check_contacts(self, c: CompanyDTO, failed, unverified) -> None:
         if self.c.contacts_required == "required" and not c.has_contacts:
             failed.append("contacts")
+        if self.c.require_phone and not c.phones:
+            failed.append("phone")
+        if self.c.require_email and not c.emails:
+            failed.append("email")
+        if self.c.require_website and not c.website:
+            failed.append("website")
 
     def _check_tax(self, c: CompanyDTO, failed, unverified) -> None:
         mode = self.c.special_tax_regimes
