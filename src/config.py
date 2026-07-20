@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     checko_api_key: str = ""
     primary_provider: str = "fake"
 
+    # веб-разведка через Claude; пусто — функция выключена
+    anthropic_api_key: str = ""
+    research_model: str = "claude-sonnet-5"
+
     log_level: str = "INFO"
 
     @field_validator("admin_ids", mode="before")

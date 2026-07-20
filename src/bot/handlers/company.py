@@ -91,6 +91,119 @@ async def cb_recheck(callback: CallbackQuery) -> None:
     await callback.answer("Данные обновлены")
 
 
+def _format_research(company_name: str, result) -> str:
+    if not result.ok:
+        return f"⚠️ Поиск по «{company_name}» не удался.\n\n{result.error}"
+
+    lines = [f"🔍 <b>Веб-разведка: {company_name}</b>", ""]
+
+    if result.emails:
+        lines.append("<b>Почты со страниц компании</b>")
+        for contact in result.emails:
+            mark = " ✅" if contact.domain_match else ""
+            note = f" — {contact.note}" if contact.note else ""
+            lines.append(f"• <code>{contact.value}</code>{mark}{note}")
+            if contact.source_url:
+                lines.append(f"  <i>{contact.source_url}</i>")
+        lines.append("")
+    else:
+        lines += ["Почт на открытых страницах не нашлось.", ""]
+
+    if result.phones:
+        lines.append("<b>Телефоны</b>")
+        lines += [f"• {c.value}" for c in result.phones]
+        lines.append("")
+
+    if result.website:
+        lines.append(f"Сайт: {result.website}")
+    if result.activity:
+        lines += ["", f"<b>Чем занимается</b>\n{result.activity}"]
+    if result.signals:
+        lines += ["", "<b>Замечено</b>"] + [f"• {s}" for s in result.signals]
+
+    if result.discarded:
+        lines += [
+            "",
+            f"<i>Отброшено как непроверенное: {len(result.discarded)} шт. "
+            "Этих контактов не было ни на одной открытой странице.</i>",
+        ]
+
+    lines += ["", "<i>✅ — домен почты совпадает с сайтом компании.</i>"]
+    return "\n".join(lines)
+
+
+@router.callback_query(F.data.startswith("co:web:"))
+async def cb_web_research(callback: CallbackQuery, bot) -> None:
+    from src.config import settings
+
+    if not settings.anthropic_api_key:
+        await callback.answer(
+            "Веб-разведка выключена: не задан ANTHROPIC_API_KEY.", show_alert=True
+        )
+        return
+
+    result_id = int(callback.data.split(":")[2])
+    await callback.answer("Ищу в вебе, это займёт до минуты…")
+
+    async with session_scope() as session:
+        row = await repo.get_result_by_id(session, result_id)
+        if row is None:
+            await bot.send_message(callback.from_user.id, "Запись не найдена.")
+            return
+        dto = model_to_dto(row.company)
+        name = row.company.name
+
+    research = await _run_research(dto)
+    await bot.send_message(
+        callback.from_user.id, _format_research(name, research), disable_web_page_preview=True
+    )
+
+
+async def _run_research(dto):
+    from anthropic import AsyncAnthropic
+
+    from src.config import settings
+    from src.services.web_research import WebResearcher
+
+    client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+    try:
+        return await WebResearcher(client, model=settings.research_model).research(dto)
+    finally:
+        await client.close()
+
+
+@router.message(Command("deep"))
+async def cmd_deep(message: Message) -> None:
+    from src.config import settings
+
+    if not settings.anthropic_api_key:
+        await message.answer("Веб-разведка выключена: не задан ANTHROPIC_API_KEY.")
+        return
+
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("Укажите ИНН: <code>/deep 7707083893</code>")
+        return
+
+    from src.providers.registry import build_lookup_provider
+
+    provider = build_lookup_provider()
+    try:
+        company = await provider.get_company(parts[1].strip())
+    finally:
+        await provider.close()
+
+    if company is None:
+        await message.answer("Компания не найдена в подключённом источнике.")
+        return
+
+    await message.answer(f"🔍 Ищу в вебе «{company.name}», это займёт до минуты…")
+    research = await _run_research(company)
+    await message.answer(
+        _format_research(company.name, research), disable_web_page_preview=True
+    )
+
+
 @router.message(Command("company"))
 async def cmd_company(message: Message) -> None:
     parts = (message.text or "").split(maxsplit=1)

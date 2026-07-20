@@ -18,6 +18,7 @@ COMMANDS = [
     BotCommand(command="searches", description="Мои запросы"),
     BotCommand(command="run_search", description="Запустить запрос"),
     BotCommand(command="company", description="Карточка компании по ИНН"),
+    BotCommand(command="deep", description="Найти контакты в вебе"),
     BotCommand(command="favorites", description="Избранное"),
     BotCommand(command="upload", description="Импорт Excel/CSV"),
     BotCommand(command="export", description="Выгрузка в Excel"),

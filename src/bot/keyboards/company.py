@@ -5,10 +5,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 def company_kb(result_id: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Подробнее", callback_data=f"co:info:{result_id}")
+    kb.button(text="🔍 Найти в вебе", callback_data=f"co:web:{result_id}")
     kb.button(text="⭐ В избранное", callback_data=f"co:fav:{result_id}")
     kb.button(text="🚫 Не показывать", callback_data=f"co:hide:{result_id}")
     kb.button(text="🔄 Проверить повторно", callback_data=f"co:recheck:{result_id}")
-    kb.adjust(2, 2)
+    kb.adjust(2, 2, 1)
     return kb.as_markup()
 
 
