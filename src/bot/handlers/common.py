@@ -1,3 +1,5 @@
+import asyncio
+
 import structlog
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
@@ -18,8 +20,11 @@ HELP = """<b>Поиск юридических лиц</b>
 /run_search — запустить запрос вручную
 /company ИНН — карточка одной компании
 /favorites — избранное
-/status — состояние источников данных
+/status — состояние источников и индекса ФНС
 /help — эта справка
+
+Для администратора:
+/load_fns — загрузить открытые данные ФНС
 
 Скоро: /upload (импорт Excel), /export (выгрузка), /pause_search.
 
@@ -84,10 +89,75 @@ async def cmd_status(message: Message) -> None:
             session, message.from_user.id, message.from_user.username
         )
         queries = await repo.list_queries(session, user.id)
+        lines += await _opendata_lines(session)
+
     active = sum(1 for q in queries if q.is_active)
     lines.append(f"\nЗапросов: {len(queries)}, из них активных: {active}")
 
     await message.answer("\n".join(lines))
+
+
+@router.message(Command("load_fns"))
+async def cmd_load_fns(message: Message) -> None:
+    """Загрузка открытых данных ФНС. Только для админа — операция тяжёлая."""
+    if message.from_user.id not in settings.admin_ids:
+        await message.answer("Команда доступна только администратору.")
+        return
+
+    from src.opendata.datasets import ACTIVE_DATASETS, BY_CODE
+
+    parts = (message.text or "").split()
+    codes = [c for c in parts[1:] if c in BY_CODE]
+    specs = [BY_CODE[c] for c in codes] if codes else list(ACTIVE_DATASETS)
+
+    names = ", ".join(s.title for s in specs)
+    await message.answer(
+        f"Начинаю загрузку: {names}.\n\n"
+        "Это займёт несколько минут: архивы весят десятки мегабайт, "
+        "записей больше миллиона. Пришлю итог по каждому набору."
+    )
+
+    asyncio.create_task(_run_load(message, specs))
+
+
+async def _run_load(message: Message, specs) -> None:
+    from src.opendata.loader import load_dataset
+
+    for spec in specs:
+        try:
+            async with session_scope() as session:
+                state = await load_dataset(session, spec)
+            await message.answer(
+                f"✅ {spec.title}\n"
+                f"Записей: {state.records_count:,}".replace(",", " ")
+                + f"\nДанные на: {state.actual_date or '—'}"
+            )
+        except Exception as exc:  # noqa: BLE001 — падение одного набора не трогает остальные
+            log.warning("opendata_load_failed", dataset=spec.code, error=str(exc))
+            await message.answer(f"❌ {spec.title}\n{type(exc).__name__}: {exc}")
+
+
+async def _opendata_lines(session) -> list[str]:
+    """Состояние локального индекса ФНС. Неполный набор честно помечается."""
+    from src.db.models import FnsDataset
+    from src.opendata.datasets import ACTIVE_DATASETS
+
+    lines = ["", "<b>Открытые данные ФНС</b>"]
+    for spec in ACTIVE_DATASETS:
+        state = await session.get(FnsDataset, spec.code)
+        if state is None or not state.loaded_at:
+            lines.append(f"• {spec.title}: не загружен")
+            continue
+        mark = "✅" if state.is_complete else "⚠️ неполный"
+        lines.append(
+            f"• {spec.title}: {mark}, записей {state.records_count:,}".replace(",", " ")
+            + f", данные на {state.actual_date or '—'}"
+        )
+    if all(
+        (await session.get(FnsDataset, s.code)) is None for s in ACTIVE_DATASETS
+    ):
+        lines.append("<i>Пока индекс пуст — налоговый режим будет «неизвестен».</i>")
+    return lines
 
 
 @router.message(Command("upload"))

@@ -110,6 +110,46 @@ class Company(Base):
     )
 
 
+class FnsDataset(Base):
+    """Состояние загруженного набора открытых данных ФНС.
+
+    is_complete критичен: вывод «спецрежимов нет» допустим только если набор
+    загружен целиком. При частичной загрузке отсутствие ИНН ничего не означает.
+    """
+
+    __tablename__ = "fns_datasets"
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    file_id: Mapped[str | None] = mapped_column(String(255))
+    actual_date: Mapped[date | None] = mapped_column(Date)
+    records_count: Mapped[int] = mapped_column(Integer, default=0)
+    files_total: Mapped[int] = mapped_column(Integer, default=0)
+    files_loaded: Mapped[int] = mapped_column(Integer, default=0)
+    is_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    loaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+
+class FnsRecord(Base):
+    __tablename__ = "fns_records"
+
+    # записей миллионы — обычного int не хватит с запасом
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    inn: Mapped[str] = mapped_column(String(12), index=True)
+    dataset_code: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str | None] = mapped_column(String(1000))
+    data: Mapped[dict] = mapped_column(JSONB)
+    actual_date: Mapped[date | None] = mapped_column(Date)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("inn", "dataset_code", name="uq_fns_inn_dataset"),
+        Index("ix_fns_lookup", "dataset_code", "inn"),
+    )
+
+
 class SearchResult(Base):
     __tablename__ = "search_results"
 

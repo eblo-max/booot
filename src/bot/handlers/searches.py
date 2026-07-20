@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from src.bot.keyboards.company import confirm_delete_kb, query_kb
 from src.db import repositories as repo
 from src.db.base import session_scope
+from src.opendata.enricher import FnsEnricher
 from src.providers.registry import build_primary_provider
 from src.services import delivery
 from src.services.search_runner import SearchRunner
@@ -75,9 +76,9 @@ async def cb_run(callback: CallbackQuery, bot: Bot) -> None:
 async def run_and_deliver(bot: Bot, chat_id: int, query_id: int) -> None:
     """Общая точка входа: и кнопка, и планировщик идут сюда."""
     provider = build_primary_provider()
-    runner = SearchRunner(provider)
 
     async with session_scope() as session:
+        runner = SearchRunner(provider, enricher=FnsEnricher(session))
         if not await repo.try_lock_query(session, query_id):
             await bot.send_message(chat_id, "Этот запрос уже выполняется, дождитесь окончания.")
             return

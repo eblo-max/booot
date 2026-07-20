@@ -65,8 +65,10 @@ class RunOutcome:
 
 
 class SearchRunner:
-    def __init__(self, provider: CompanyProvider):
+    def __init__(self, provider: CompanyProvider, enricher=None):
         self.provider = provider
+        # обогащение из локального индекса ФНС; None — работаем без него
+        self.enricher = enricher
 
     async def run(self, session: AsyncSession, query: SearchQuery) -> RunOutcome:
         criteria = SearchCriteria.model_validate(query.criteria_json)
@@ -91,6 +93,11 @@ class SearchRunner:
             return await self._fail(session, run, outcome, f"Превышен rate limit: {exc}")
         except ProviderError as exc:
             return await self._fail(session, run, outcome, f"Источник недоступен: {exc}")
+
+        if self.enricher is not None and companies:
+            # строго до фильтрации: иначе фильтр по налоговому режиму и выручке
+            # будет применяться к данным, которых ещё нет
+            await self.enricher.enrich(companies)
 
         await self._reconcile(session, query, run, criteria, companies, outcome)
 

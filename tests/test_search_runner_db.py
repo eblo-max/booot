@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.db import repositories as repo
 from src.db.base import Base
+from src.domain.company import CompanyDTO
 from src.domain.criteria import SearchCriteria
+from src.domain.tax_status import TaxStatus
+from src.opendata.enricher import FnsEnricher
 from src.providers.fake import FakeProvider
 from src.services.search_runner import ItemKind, SearchRunner
 
@@ -61,6 +64,72 @@ async def query(session, criteria):
     q = await repo.create_query(session, user.id, "Строительные ООО Москвы", criteria)
     await session.commit()
     return q
+
+
+class TestFnsEnricher:
+    """Вывод «вероятная ОСНО» допустим только при полном и свежем индексе."""
+
+    async def _setup(self, session, *, complete: bool, loaded_at=None, regimes=None):
+        from datetime import datetime
+
+        from src.db.models import FnsDataset, FnsRecord
+
+        session.add(
+            FnsDataset(
+                code="snr",
+                is_complete=complete,
+                loaded_at=loaded_at or datetime.now(),
+                records_count=1,
+            )
+        )
+        if regimes is not None:
+            session.add(
+                FnsRecord(inn="7703023100", dataset_code="snr", name="X", data=regimes)
+            )
+        await session.commit()
+
+    def _company(self):
+        return CompanyDTO(inn="7703023100", ogrn="1027700132195", name="ООО X")
+
+    async def test_absent_inn_with_complete_index_is_probable_osno(self, session):
+        await self._setup(session, complete=True)
+        company = self._company()
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.OSNO_PROBABLE
+
+    async def test_present_inn_is_special(self, session):
+        await self._setup(session, complete=True, regimes={"usn": True, "ausn": False})
+        company = self._company()
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.SPECIAL
+        assert company.tax_regimes == ["УСН"]
+
+    async def test_incomplete_index_yields_unknown(self, session):
+        """Главная защита: неполный индекс не даёт права утверждать про ОСНО."""
+        await self._setup(session, complete=False)
+        company = self._company()
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.UNKNOWN
+
+    async def test_stale_index_yields_unknown(self, session):
+        from datetime import datetime, timedelta
+
+        await self._setup(session, complete=True, loaded_at=datetime.now() - timedelta(days=400))
+        company = self._company()
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.UNKNOWN
+
+    async def test_missing_dataset_yields_unknown(self, session):
+        company = self._company()
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.UNKNOWN
+
+    async def test_confirmed_osno_is_not_downgraded(self, session):
+        await self._setup(session, complete=True)
+        company = self._company()
+        company.tax_status = TaxStatus.OSNO_CONFIRMED
+        await FnsEnricher(session).enrich([company])
+        assert company.tax_status is TaxStatus.OSNO_CONFIRMED
 
 
 class TestUserUpsert:
