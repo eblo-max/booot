@@ -63,6 +63,31 @@ async def query(session, criteria):
     return q
 
 
+class TestUserUpsert:
+    """Регрессия: aiogram обрабатывает апдейты параллельно, и SELECT-потом-INSERT
+    ронял UniqueViolation по users.telegram_id при быстрых повторных сообщениях."""
+
+    async def test_repeated_calls_do_not_violate_unique(self, session):
+        first = await repo.get_or_create_user(session, telegram_id=777, username="a")
+        second = await repo.get_or_create_user(session, telegram_id=777, username="a")
+        await session.commit()
+        assert first.id == second.id
+
+    async def test_username_is_updated(self, session):
+        await repo.get_or_create_user(session, telegram_id=778, username="old")
+        await session.commit()
+        user = await repo.get_or_create_user(session, telegram_id=778, username="new")
+        await session.commit()
+        assert user.username == "new"
+
+    async def test_empty_username_does_not_wipe_stored(self, session):
+        await repo.get_or_create_user(session, telegram_id=779, username="keep")
+        await session.commit()
+        user = await repo.get_or_create_user(session, telegram_id=779, username=None)
+        await session.commit()
+        assert user.username == "keep"
+
+
 class TestVerticalScenario:
     async def test_first_run_finds_new_companies(self, session, query):
         runner = SearchRunner(FakeProvider(pool_size=400))

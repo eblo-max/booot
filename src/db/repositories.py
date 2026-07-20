@@ -11,12 +11,18 @@ from src.domain.criteria import SearchCriteria
 
 
 async def get_or_create_user(session: AsyncSession, telegram_id: int, username: str | None) -> User:
+    """Атомарный upsert.
+
+    aiogram обрабатывает апдейты параллельно, поэтому SELECT-потом-INSERT
+    ловит UniqueViolation, когда пользователь пишет боту несколько раз подряд.
+    """
+    await session.execute(
+        insert(User)
+        .values(telegram_id=telegram_id, username=username)
+        .on_conflict_do_nothing(index_elements=[User.telegram_id])
+    )
     user = await session.scalar(select(User).where(User.telegram_id == telegram_id))
-    if user is None:
-        user = User(telegram_id=telegram_id, username=username)
-        session.add(user)
-        await session.flush()
-    elif username and user.username != username:
+    if username and user.username != username:
         user.username = username
     return user
 
