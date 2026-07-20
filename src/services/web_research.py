@@ -26,7 +26,12 @@ from src.domain.normalize import normalize_emails, normalize_phones, normalize_w
 log = structlog.get_logger()
 
 MODEL = "claude-sonnet-5"
-MAX_TOOL_ROUNDS = 4
+# каждый повтор — это полный агентный цикл на минуты; четыре подряд давали
+# многоминутное молчание в чате, двух достаточно
+MAX_TOOL_ROUNDS = 2
+# жёсткий потолок на весь разбор: по умолчанию клиент ждёт 10 минут,
+# и пользователь всё это время смотрит на «ищу…»
+TIMEOUT_SECONDS = 150.0
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"(?:\+7|8)[\s\-(]*\d{3}[\s\-)]*\d{3}[\s\-]*\d{2}[\s\-]*\d{2}")
@@ -194,6 +199,8 @@ class WebResearcher:
         return "\n".join(lines)
 
     async def research(self, company: CompanyDTO) -> ResearchResult:
+        # видно в логах сразу, а не только после ответа модели
+        log.info("web_research_started", inn=company.inn, name=company.name)
         messages = [{"role": "user", "content": self._prompt(company)}]
         collected_text: list[str] = []
         response = None
@@ -206,8 +213,10 @@ class WebResearcher:
                     max_tokens=8000,
                     system=SYSTEM,
                     thinking={"type": "adaptive"},
-                    # на medium модель ограничивалась поиском и не открывала страницы
-                    output_config={"effort": "high"},
+                    # high давал слишком долгий разбор; цикл теперь ведёт
+                    # submit_findings, а не принудительный формат, и medium хватает
+                    output_config={"effort": "medium"},
+                    timeout=TIMEOUT_SECONDS,
                     tools=[
                         # поиск дорогой: две выдачи дают ~200 тыс. входных токенов,
                         # поэтому ограничиваем его и переносим работу на загрузку страниц
@@ -247,6 +256,11 @@ class WebResearcher:
                     )
         except Exception as exc:  # noqa: BLE001 — падение поиска не должно ронять бота
             log.warning("web_research_failed", inn=company.inn, error=str(exc))
+            if "timeout" in type(exc).__name__.lower():
+                return ResearchResult(
+                    error="Разбор занял больше двух с половиной минут и был прерван. "
+                    "Попробуйте ещё раз — обычно со второго раза быстрее."
+                )
             return ResearchResult(error=f"{type(exc).__name__}: {exc}")
 
         if raw is None:

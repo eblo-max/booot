@@ -154,7 +154,7 @@ async def cb_web_research(callback: CallbackQuery, bot) -> None:
         return
 
     result_id = int(callback.data.split(":")[2])
-    await callback.answer("Ищу в вебе, это займёт до минуты…")
+    await callback.answer("Ищу в вебе, это займёт 1–3 минуты…")
 
     async with session_scope() as session:
         row = await repo.get_result_by_id(session, result_id)
@@ -208,7 +208,7 @@ async def cmd_deep(message: Message) -> None:
         await message.answer("Компания не найдена в подключённом источнике.")
         return
 
-    await message.answer(f"🔍 Ищу в вебе «{company.name}», это займёт до минуты…")
+    await message.answer(f"🔍 Ищу в вебе «{company.name}», это займёт 1–3 минуты…")
     research = await _run_research(company)
     await message.answer(
         _format_research(company.name, research), disable_web_page_preview=True

@@ -232,8 +232,8 @@ class TestRequestShape:
         # поиск дороже загрузки страниц — лимитов должно быть больше на fetch
         assert by_type["web_search_20260209"]["max_uses"] < by_type["web_fetch_20260209"]["max_uses"]
         assert by_type["web_fetch_20260209"]["max_content_tokens"] <= 20000
-        # на medium модель не открывала страницы вовсе
-        assert kwargs["output_config"]["effort"] == "high"
+        # без жёсткого таймаута клиент ждёт 10 минут, а пользователь смотрит на «ищу…»
+        assert kwargs["timeout"] <= 180
         # на Sonnet 5 параметры сэмплирования отвергаются API
         assert "temperature" not in kwargs and "top_p" not in kwargs
         assert kwargs["thinking"] == {"type": "adaptive"}
