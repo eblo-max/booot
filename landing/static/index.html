@@ -94,6 +94,9 @@
   .brand:hover .logo { transform: rotate(-6deg) scale(1.06); }
   .logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
+  /* название — как пишется (LegalSolutions), без капса шапки */
+  .brand-name { text-transform: none; letter-spacing: -0.01em; }
+
   /* прячем только подпись, но не сам логотип */
   @media (max-width: 420px) { .brand-name { display: none; } }
 
