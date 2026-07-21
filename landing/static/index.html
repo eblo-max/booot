@@ -999,32 +999,6 @@
   .contact-lines a:hover { padding-left: 10px; }
   .contact-lines em { font-style: normal; font-family: var(--sans); font-size: 10.5px; font-weight: 800; letter-spacing: .18em; opacity: .8; }
 
-  /* нижняя плашка */
-
-  .strip {
-    display: grid; grid-template-columns: auto 1fr auto; gap: clamp(20px, 4vw, 56px);
-    align-items: center; border: 1px solid var(--ink);
-    padding: clamp(18px, 2.2vw, 28px) clamp(18px, 3vw, 36px);
-    margin: clamp(40px, 6vw, 80px) 0;
-  }
-  @media (max-width: 800px) { .strip { grid-template-columns: 1fr; gap: 22px; } }
-
-  .strip-mark { display: flex; align-items: center; gap: 16px; }
-  .strip-sq { width: 48px; height: 48px; background: var(--red); color: #fff; display: grid; place-items: center; flex: none; font-size: 21px; }
-  .strip-mark b { display: block; font-size: 12.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; line-height: 1.45; }
-  .strip-mark span { display: block; font-size: 13.5px; color: var(--ink-2); margin-top: 5px; }
-
-  .strip-words { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; justify-self: center; }
-  .strip-words i { font-style: normal; color: var(--red); }
-
-  .barcode {
-    height: 46px; min-width: 160px; justify-self: end;
-    background-image: repeating-linear-gradient(90deg,
-      var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 9px,
-      var(--ink) 9px 12px, transparent 12px 13px, var(--ink) 13px 14px, transparent 14px 18px);
-  }
-  @media (max-width: 800px) { .barcode { justify-self: start; width: 100%; } }
-
   footer { background: var(--ink); color: var(--grey); padding: 30px 0 44px; font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .footer-in { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; }
 
@@ -1560,19 +1534,6 @@
     </div>
   </section>
 
-  <div class="shell">
-    <div class="strip reveal">
-      <div class="strip-mark">
-        <div class="strip-sq">↗</div>
-        <div>
-          <b>Полное юридическое<br />сопровождение</b>
-          <span>от консультации до регистрации в ЕГРЮЛ</span>
-        </div>
-      </div>
-      <div class="strip-words"><span>Надёжность</span><i>•</i><span>Опыт</span><i>•</i><span>Результат</span></div>
-      <div class="barcode" aria-hidden="true"></div>
-    </div>
-  </div>
 </main>
 
 <footer>
