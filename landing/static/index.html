@@ -98,8 +98,18 @@
   .brand-name { text-transform: none; letter-spacing: -0.01em; }
   .brand-name .cap { color: var(--red); }
 
-  /* прячем только подпись, но не сам логотип */
-  @media (max-width: 420px) { .brand-name { display: none; } }
+  /* на узких экранах название остаётся, но ужимаются кегль, логотип и иконки */
+  @media (max-width: 480px) {
+    .top .brand { font-size: 20px; gap: 9px; }
+    .logo { width: 32px; height: 32px; border-radius: 9px; }
+    .top-ico { gap: 8px; }
+    .ico svg { width: 20px; }
+  }
+  /* самые узкие экраны — название чуть меньше, чтобы не наехало на иконки */
+  @media (max-width: 360px) {
+    .top .brand { font-size: 18px; }
+    .ico svg { width: 19px; }
+  }
 
   /* иконки связи */
   .top-ico { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 18px); }
