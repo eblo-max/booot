@@ -96,6 +96,7 @@
 
   /* название — как пишется (LegalSolutions), без капса шапки */
   .brand-name { text-transform: none; letter-spacing: -0.01em; }
+  .brand-name .cap { color: var(--red); }
 
   /* прячем только подпись, но не сам логотип */
   @media (max-width: 420px) { .brand-name { display: none; } }
@@ -1089,7 +1090,7 @@
     <a class="brand" href="#top">
       <!-- Логотип: замените содержимое .logo на <img src="logo.svg" alt="LegalSolutions" /> -->
       <span class="logo">LS</span>
-      <span class="brand-name">LegalSolutions</span>
+      <span class="brand-name"><span class="cap">L</span>egal<span class="cap">S</span>olutions</span>
     </a>
 
     <nav>
