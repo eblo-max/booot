@@ -62,7 +62,7 @@ def _compose(lead: Lead) -> str:
     inn = lead.inn or "— уточнят"
     kontakt = lead.kontakt or "не указан"
     return (
-        "🆕 Заявка с сайта «Выкуп ООО»\n\n"
+        "🆕 Заявка с сайта LegalSolutions\n\n"
         f"ИНН: {inn}\n"
         f"Регион: {lead.region or '—'}\n"
         f"Налогообложение: {lead.sno or '—'}\n"
