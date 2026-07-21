@@ -404,7 +404,14 @@
 
   /* ---------- бегущая строка ---------- */
 
-  .ticker { background: var(--ink); color: var(--bg); overflow: hidden; white-space: nowrap; padding: 13px 0; }
+  /* лента идёт под лёгким наклоном — заходит за края экрана, чтобы углы не оголялись */
+  .ticker {
+    background: var(--ink); color: var(--bg); overflow: hidden; white-space: nowrap;
+    padding: 13px 0;
+    width: 108%; margin: clamp(16px, 2.4vw, 30px) 0 clamp(16px, 2.4vw, 30px) -4%;
+    transform: rotate(-2deg);
+    position: relative; z-index: 5;
+  }
   .ticker-track { display: inline-flex; gap: 44px; animation: run 38s linear infinite; will-change: transform; }
   .ticker span { font-family: var(--display); font-weight: 900; font-stretch: condensed; text-transform: uppercase; font-size: 22px; letter-spacing: .02em; }
   /* звёздочка нарисована вектором: текстовый символ ✳ на телефонах
