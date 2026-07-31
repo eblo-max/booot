@@ -593,12 +593,21 @@
 
   .stat-n {
     font-family: var(--display); font-weight: 900; font-stretch: condensed;
-    font-size: clamp(52px, 8vw, 104px); line-height: .82; letter-spacing: -0.04em;
+    font-size: clamp(52px, 8vw, 104px); line-height: 1; letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
-    display: flex; align-items: baseline;
+    display: inline-flex; align-items: flex-end;
   }
-  /* суффикс (+, мин) — красным и мельче основного числа */
-  .stat-n .suf { color: var(--red); font-size: .42em; margin-left: .06em; letter-spacing: 0; }
+  /* барабаны одометра: окно в одну цифру, столбик прокручивается */
+  .stat-n .reel { display: inline-block; height: 1em; line-height: 1; overflow: hidden; }
+  .stat-n .reel .col {
+    display: block; will-change: transform;
+    transition: transform 1.5s cubic-bezier(.16, 1, .3, 1);
+  }
+  .stat-n .reel .col i { display: block; height: 1em; line-height: 1; font-style: normal; text-align: center; }
+  .stat-n .sep { display: inline-block; width: .22em; }
+
+  /* суффикс (+, мин) — красным, мельче и приподнят */
+  .stat-n .suf { color: var(--red); font-size: .42em; margin-left: .06em; margin-bottom: .34em; letter-spacing: 0; }
   .stat-static { color: var(--ink); }
   .stat-static::after { content: ""; }
 
@@ -2012,7 +2021,7 @@
       io.observe(foot);
     })();
 
-    /* --- статистика: цифры набегают при появлении --- */
+    /* --- статистика: цифры-барабаны (одометр) прокручиваются при появлении --- */
     (function stats() {
       var grid = document.querySelector(".stats-grid");
       if (!grid) return;
@@ -2032,27 +2041,59 @@
         return;
       }
 
+      // строим барабаны, но не запускаем прокрутку (стоят на нуле)
+      function build(el) {
+        var to = parseInt(el.getAttribute("data-to"), 10);
+        var suf = el.getAttribute("data-suffix") || "";
+        var str = to.toLocaleString("ru-RU");
+        el.textContent = "";
+        var reels = [];
+
+        str.split("").forEach(function (ch) {
+          if (/\d/.test(ch)) {
+            var d = +ch;
+            var spins = 2;                 // сколько полных оборотов до приземления
+            var total = spins * 10 + d;
+            var reel = document.createElement("span"); reel.className = "reel";
+            var col = document.createElement("span"); col.className = "col";
+            for (var k = 0; k <= total; k++) {
+              var i = document.createElement("i");
+              i.textContent = String(k % 10);
+              col.appendChild(i);
+            }
+            reel.appendChild(col);
+            el.appendChild(reel);
+            reels.push({ col: col, total: total });
+          } else {
+            var sep = document.createElement("span"); sep.className = "sep";
+            el.appendChild(sep);           // разделитель тысяч
+          }
+        });
+
+        if (suf) {
+          var s = document.createElement("span"); s.className = "suf";
+          s.innerHTML = suf;
+          el.appendChild(s);
+        }
+        return reels;
+      }
+
+      var allReels = nums.map(build);
+
       function run() {
         grid.classList.add("in");
-        nums.forEach(function (el) {
-          var to = parseInt(el.getAttribute("data-to"), 10);
-          var suf = el.getAttribute("data-suffix") || "";
-          var dur = 1400, t0 = 0;
-          function tick(now) {
-            if (!t0) t0 = now;
-            var p = Math.min((now - t0) / dur, 1);
-            var e = 1 - Math.pow(1 - p, 3); // ease-out
-            var val = Math.round(to * e);
-            el.innerHTML = val.toLocaleString("ru-RU") + (suf ? '<span class="suf">' + suf + "</span>" : "");
-            if (p < 1) requestAnimationFrame(tick);
-          }
-          requestAnimationFrame(tick);
+        allReels.forEach(function (reels) {
+          reels.forEach(function (r, idx) {
+            // каскад слева направо + чуть разная скорость = «дорогой» доворот
+            r.col.style.transitionDelay = (idx * 0.09) + "s";
+            r.col.style.transform = "translateY(-" + r.total + "em)";
+          });
         });
       }
 
       if ("IntersectionObserver" in window) {
         var io = new IntersectionObserver(function (en) {
-          en.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); run(); } });
+          en.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); requestAnimationFrame(run); } });
         }, { threshold: 0.4 });
         io.observe(grid);
       } else { run(); }
