@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="LegalSolutions — выкуп ООО на ОСНО или УСН в Москве и области. Полная смена участника и руководителя у нотариуса, сопровождение до ЕГРЮЛ.">
+<meta name="description" content="LegalSolutions — выкуп ООО на ОСНО или УСН в Москве и области.">
 </head>
 <body>
 <title>LegalSolutions — выкуп ООО в Москве и МО, ОСНО и УСН</title>
@@ -673,28 +673,39 @@
     .cmp-hint { display: none; }
     .cmp-head h2 { font-size: clamp(26px, 8vw, 40px); }
 
-    .cmp-row { grid-template-columns: 1fr 1fr 1fr; }
+    /* minmax(0,1fr) — колонки могут сжиматься ниже длинного слова, ничего не вылезает */
+    .cmp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
 
     .cmp-crit {
-      grid-column: 1 / -1; padding: 15px 18px 8px;
-      font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--grey);
+      grid-column: 1 / -1; padding: 14px 14px 8px;
+      font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--grey);
+      justify-content: center; text-align: center;
     }
     .cmp-thead .cmp-crit { display: none; }
 
     .cmp-cell {
-      flex-direction: column; align-items: flex-start; gap: 9px;
-      padding: 14px 14px; font-size: 13px; color: var(--grey);
+      flex-direction: column; align-items: flex-start; gap: 8px;
+      padding: 13px 11px; font-size: 12.5px; color: var(--grey);
+      min-width: 0; overflow-wrap: anywhere; hyphens: auto;
     }
-    .cmp-cell .v { line-height: 1.35; }
+    .cmp-cell .v { line-height: 1.32; width: 100%; overflow-wrap: anywhere; }
     .cmp-cell.cmp-us .v { font-weight: 600; }
-    .cmp-thead .cmp-cell { font-size: 13px; padding: 32px 14px 14px; }
-    .cmp-badge { font-size: 8px; padding: 3px 8px; top: 10px; left: 14px; letter-spacing: .05em; }
-    .mk { width: 20px; height: 20px; font-size: 10px; }
 
+    .cmp-thead .cmp-cell { font-size: 12px; padding: 30px 11px 13px; }
+    .cmp-badge { font-size: 8px; padding: 3px 7px; top: 9px; left: 11px; letter-spacing: .05em; }
+    .mk { width: 19px; height: 19px; font-size: 9px; }
+
+    /* победитель — ровная лёгкая зелёная заливка ячейки, без вертикальной линии */
     .cmp-us, .cmp-thead .cmp-us, .cmp-row:last-child .cmp-us {
-      box-shadow: none; background: color-mix(in srgb, var(--ok) 6%, transparent);
+      box-shadow: none; background: color-mix(in srgb, var(--ok) 8%, transparent);
     }
-    .cmp-cell.cmp-us, .cmp-thead .cmp-us { box-shadow: inset 3px 0 var(--ok); }
+  }
+
+  @media (max-width: 380px) {
+    .cmp-cell { padding: 12px 8px; font-size: 11.5px; }
+    .cmp-thead .cmp-cell { font-size: 11px; padding: 28px 8px 11px; }
+    .cmp-crit { font-size: 10.5px; }
+    .mk { width: 18px; height: 18px; font-size: 9px; }
   }
 
   /* ---------- СТАТИСТИКА ---------- */
