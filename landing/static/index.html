@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="LegalSolutions — выкуп ООО на ОСНО или УСН в Москве и области.">
+<meta name="description" content="LegalSolutions — выкуп и продажа ООО. ОСНО, УСН, Москва, область и регионы индивидуально. Смена участника и руководителя у нотариуса, сопровождение до ЕГРЮЛ.">
 </head>
 <body>
 <title>LegalSolutions — выкуп ООО в Москве и МО, ОСНО и УСН</title>
@@ -1212,6 +1212,25 @@
   .checks li b { color: var(--ink); font-weight: 800; }
   .checks i { font-style: normal; color: var(--red); font-weight: 800; font-size: 12px; letter-spacing: .1em; }
 
+  /* ---------- ЕЩЁ ПОМОГАЕМ ---------- */
+
+  .svc-sec { padding: var(--sec) 0; }
+  .svc {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: clamp(14px, 1.6vw, 20px);
+  }
+  .svc-item {
+    display: flex; flex-direction: column; gap: 9px;
+    padding: clamp(22px, 2.4vw, 32px);
+    background: var(--paper);
+    border: 1px solid var(--line); border-top: 3px solid var(--red);
+    border-radius: 12px;
+    transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s;
+  }
+  .svc-item:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(0,0,0,.07); }
+  .svc-item b { font-size: clamp(17px, 1.8vw, 20px); font-weight: 700; letter-spacing: -0.02em; }
+  .svc-item span { font-size: 15px; color: var(--ink-2); line-height: 1.5; }
+
   /* ---------- 8. ВОПРОСЫ ---------- */
 
   .faq-sec { padding: 0 0 var(--sec); }
@@ -1456,7 +1475,7 @@
                 <path d="M10 0C4.5 0 0 4.5 0 10c0 7.2 9 13.6 9.4 13.8.2.2.6.2.8 0C10.6 23.6 20 17.2 20 10 20 4.5 15.5 0 10 0zm0 14a4 4 0 110-8 4 4 0 010 8z" />
               </svg>
             </span>
-            Москва и Московская область
+            Москва и МО, регионы — индивидуально
           </div>
         </div>
       </div>
@@ -1732,7 +1751,7 @@
       <dl class="crit reveal">
         <div>
           <span class="crit-i">01</span>
-          <div><dt>География</dt><b>Москва и область</b><dd>Юридический адрес в пределах региона</dd></div>
+          <div><dt>География</dt><b>Москва, область и регионы</b><dd>Приоритет — Москва и МО, компании из других регионов рассматриваем индивидуально</dd></div>
         </div>
         <div>
           <span class="crit-i">02</span>
@@ -1744,7 +1763,7 @@
         </div>
         <div>
           <span class="crit-i">04</span>
-          <div><dt>Форма</dt><b>Только ООО</b><dd>Смена состава участников и единоличного исполнительного органа</dd></div>
+          <div><dt>Форма</dt><b>Приоритет — ООО</b><dd>Рассматриваем и другие формы (ИП, АО) индивидуально. Смена участника и руководителя у нотариуса</dd></div>
         </div>
         <div>
           <span class="crit-i">05</span>
@@ -1825,6 +1844,36 @@
     </div>
   </section>
 
+  <!-- 7.5 ЕЩЁ ПОМОГАЕМ -->
+  <section class="svc-sec">
+    <div class="shell">
+      <div class="crit-head reveal">
+        <span class="kicker">Ещё помогаем</span>
+        <h2 class="display">Не только выкуп</h2>
+        <p>Мы юристы по работе с юридическими лицами — закроем и смежные задачи под ключ.</p>
+      </div>
+
+      <div class="svc reveal">
+        <div class="svc-item">
+          <b>Продажа готовых ООО</b>
+          <span>Подберём и оформим действующую компанию под ваши задачи — с расчётным счётом, оборотами или «чистую».</span>
+        </div>
+        <div class="svc-item">
+          <b>Дубликаты документов</b>
+          <span>Восстановим устав, свидетельства и решения — если оригиналы утеряны.</span>
+        </div>
+        <div class="svc-item">
+          <b>Сдача отчётности</b>
+          <span>Подготовим и сдадим бухгалтерскую и налоговую отчётность в срок.</span>
+        </div>
+        <div class="svc-item">
+          <b>Регистрация и сопровождение</b>
+          <span>Регистрация фирм, изменения в ЕГРЮЛ, юридическое сопровождение сделок.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- 8. ВОПРОСЫ -->
   <section class="faq-sec" id="faq">
     <div class="shell">
@@ -1857,6 +1906,22 @@
         <details>
           <summary><i>06</i><span>Как оформляется переход компании?</span></summary>
           <p>Через нотариальное удостоверение отчуждения доли и смену единоличного исполнительного органа с последующей регистрацией изменений в ЕГРЮЛ. Стороны и документы проверяет нотариус.</p>
+        </details>
+        <details>
+          <summary><i>07</i><span>Рассматриваете компании не из Москвы?</span></summary>
+          <p>Да. Приоритет — Москва и область, но компании из других регионов рассматриваем индивидуально. Пришлите ИНН — оценим вашу ситуацию.</p>
+        </details>
+        <details>
+          <summary><i>08</i><span>Работаете только с ООО?</span></summary>
+          <p>Основной профиль — ООО, по ним больше всего спроса. Но рассматриваем и другие формы (ИП, АО) — тоже индивидуально.</p>
+        </details>
+        <details>
+          <summary><i>09</i><span>Можно купить готовую фирму у вас?</span></summary>
+          <p>Да. Мы подбираем и оформляем действующие ООО под задачи покупателя — с расчётным счётом, оборотами или «чистые». Напишите, какая нужна.</p>
+        </details>
+        <details>
+          <summary><i>10</i><span>Поможете с дубликатами документов или отчётностью?</span></summary>
+          <p>Да. Восстановим устав, свидетельства и решения, подготовим и сдадим отчётность. Это отдельные услуги — обсудим при обращении.</p>
         </details>
       </div>
     </div>
