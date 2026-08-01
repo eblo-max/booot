@@ -1153,6 +1153,17 @@
   .crit b { display: block; font-family: var(--display); font-weight: 900; font-stretch: condensed; text-transform: uppercase; font-size: clamp(22px, 2.6vw, 33px); line-height: .95; margin-bottom: 7px; }
   .crit dd { margin: 0; font-size: 15.5px; color: var(--ink-2); line-height: 1.5; max-width: 32ch; }
 
+  /* «особенно интересны» — теги под критериями */
+  .hot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: clamp(28px, 3.4vw, 44px); }
+  .hot-label { font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--red); margin-right: 6px; }
+  .hot ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
+  .hot li {
+    border: 1.5px solid var(--line); border-radius: 999px;
+    padding: 9px 18px; font-size: 14.5px; font-weight: 500; color: var(--ink);
+    transition: border-color .18s, background .18s, transform .18s;
+  }
+  .hot li:hover { border-color: var(--red); transform: translateY(-2px); }
+
   /* ---------- 6. ШАГИ: горизонтальная лента ---------- */
 
   .flow { background: var(--ink); color: var(--bg); padding: var(--sec) 0; }
@@ -1215,6 +1226,7 @@
   /* ---------- ЕЩЁ ПОМОГАЕМ ---------- */
 
   .svc-sec { padding: var(--sec) 0; }
+  .svc-sec + .svc-sec { padding-top: 0; }  /* два блока подряд — без двойного отступа */
   .svc {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: clamp(14px, 1.6vw, 20px);
@@ -1774,6 +1786,18 @@
           <div><dt>Долги и споры</dt><b>Индивидуально</b><dd>Важно назвать их на первом шаге — на проверке они всплывут</dd></div>
         </div>
       </dl>
+
+      <div class="hot reveal">
+        <span class="hot-label">Особенно интересны</span>
+        <ul>
+          <li>С расчётным счётом</li>
+          <li>С оборотами и историей</li>
+          <li>Без деятельности — «чистые»</li>
+          <li>С лицензиями и допусками СРО</li>
+          <li>С опытом тендеров и госзакупок</li>
+          <li>На ОСНО в Москве</li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -1841,6 +1865,36 @@
         <li><i>03</i><span><b>Запись и сопровождение у нотариуса</b>, включая согласование даты</span></li>
         <li><i>04</i><span><b>Полная смена участника и руководителя</b> — без «хвостов» в реестре</span></li>
       </ul>
+    </div>
+  </section>
+
+  <!-- 7.2 БЕЗОПАСНОСТЬ -->
+  <section class="svc-sec">
+    <div class="shell">
+      <div class="crit-head reveal">
+        <span class="kicker">Безопасность</span>
+        <h2 class="display">Сделка под защитой</h2>
+        <p>Продавец ничем не рискует: всё оформляется официально и конфиденциально.</p>
+      </div>
+
+      <div class="svc reveal">
+        <div class="svc-item">
+          <b>Сделка у нотариуса</b>
+          <span>Отчуждение доли удостоверяется нотариально — строго по закону.</span>
+        </div>
+        <div class="svc-item">
+          <b>Проверка сторон</b>
+          <span>Нотариус подтверждает полномочия и дееспособность участников сделки.</span>
+        </div>
+        <div class="svc-item">
+          <b>Конфиденциальность</b>
+          <span>Данные о вас и компании не передаём третьим лицам без вашего согласия.</span>
+        </div>
+        <div class="svc-item">
+          <b>Документы на руках</b>
+          <span>Договор и подтверждения остаются у вас после регистрации в ЕГРЮЛ.</span>
+        </div>
+      </div>
     </div>
   </section>
 
