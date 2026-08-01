@@ -42,6 +42,7 @@
      элементов (лента, заголовок) — hidden на одном body html не удерживал */
   html { overflow-x: clip; }
   body {
+    margin: 0;                 /* сброс браузерного отступа 8px — иначе контент не доходит до краёв */
     background: var(--bg); color: var(--ink);
     font-family: var(--sans); font-size: 16px; line-height: 1.55;
     -webkit-font-smoothing: antialiased;
