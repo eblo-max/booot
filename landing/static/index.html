@@ -1153,16 +1153,50 @@
   .crit b { display: block; font-family: var(--display); font-weight: 900; font-stretch: condensed; text-transform: uppercase; font-size: clamp(22px, 2.6vw, 33px); line-height: .95; margin-bottom: 7px; }
   .crit dd { margin: 0; font-size: 15.5px; color: var(--ink-2); line-height: 1.5; max-width: 32ch; }
 
-  /* «особенно интересны» — теги под критериями */
-  .hot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: clamp(28px, 3.4vw, 44px); }
-  .hot-label { font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--red); margin-right: 6px; }
-  .hot ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
+  /* «особенно интересны» — теги вразброс, с пружинным появлением */
+  .hot { margin-top: clamp(30px, 4vw, 50px); }
+  .hot-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--red); margin-bottom: 18px; }
+  .hot ul { list-style: none; display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 0; }
+
   .hot li {
+    --r: 0deg; --ty: 0px;
     border: 1.5px solid var(--line); border-radius: 999px;
-    padding: 9px 18px; font-size: 14.5px; font-weight: 500; color: var(--ink);
-    transition: border-color .18s, background .18s, transform .18s;
+    padding: 11px 20px; font-size: 15px; font-weight: 600; color: var(--ink);
+    background: var(--paper); transform-origin: center; cursor: default;
+    opacity: 0; transform: scale(.7) rotate(calc(var(--r) - 8deg)) translateY(var(--ty));
+    transition: opacity .5s ease, transform .55s cubic-bezier(.2, 1.6, .35, 1),
+                border-color .2s, background .2s, color .2s, box-shadow .2s;
   }
-  .hot li:hover { border-color: var(--red); transform: translateY(-2px); }
+  /* разброс по углам и высоте */
+  .hot li:nth-child(1) { --r: -3deg; --ty: 0px; }
+  .hot li:nth-child(2) { --r: 2deg;  --ty: 7px; }
+  .hot li:nth-child(3) { --r: -1.5deg; --ty: -4px; }
+  .hot li:nth-child(4) { --r: 2.5deg; --ty: 5px; }
+  .hot li:nth-child(5) { --r: -2deg; --ty: -2px; }
+  .hot li:nth-child(6) { --r: 1.5deg; --ty: 7px; }
+
+  /* появление по очереди */
+  .hot.in li { opacity: 1; transform: rotate(var(--r)) translateY(var(--ty)); }
+  .hot.in li:nth-child(1) { transition-delay: .04s; }
+  .hot.in li:nth-child(2) { transition-delay: .10s; }
+  .hot.in li:nth-child(3) { transition-delay: .16s; }
+  .hot.in li:nth-child(4) { transition-delay: .22s; }
+  .hot.in li:nth-child(5) { transition-delay: .28s; }
+  .hot.in li:nth-child(6) { transition-delay: .34s; }
+
+  .hot li:hover {
+    background: var(--red); border-color: var(--red); color: #fff;
+    transform: rotate(0deg) translateY(-5px) scale(1.05);
+    box-shadow: 0 12px 26px rgba(225, 27, 34, .32);
+    transition-delay: 0s;
+  }
+
+  /* у блока тегов не нужна красная «капля» из общей анимации появления */
+  .hot.reveal::after { content: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hot li { opacity: 1; transform: rotate(var(--r)) translateY(var(--ty)); }
+  }
 
   /* ---------- 6. ШАГИ: горизонтальная лента ---------- */
 
