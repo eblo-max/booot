@@ -672,10 +672,14 @@
 
   /* телефон: без бокового скролла — критерий подписью сверху, 3 варианта ровным рядом */
   @media (max-width: 760px) {
-    /* меньше боковых полей у секции — таблице больше ширины */
-    .compare .shell { padding-inline: clamp(12px, 3.6vw, 18px); }
+    /* таблица во всю ширину экрана, встык к краям — единый блок */
+    .compare .shell { padding-inline: 0; }
+    .cmp-head { padding-inline: 18px; }
     .cmp-scroll { overflow: visible; padding: 0; }
-    .cmp { min-width: 0; border-radius: 16px; }
+    .cmp {
+      min-width: 0; border-radius: 0;
+      border-left: 0; border-right: 0; box-shadow: none;
+    }
     .cmp-hint { display: none; }
     .cmp-head h2 { font-size: clamp(26px, 8vw, 40px); }
 
