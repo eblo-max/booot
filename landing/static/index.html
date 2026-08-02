@@ -52,6 +52,14 @@
 
   .shell { max-width: var(--shell); margin-inline: auto; padding-inline: var(--gut); }
 
+  /* мобильный ритм: меньше «воздуха» между секциями + единое значение для всех */
+  @media (max-width: 760px) {
+    :root { --sec: clamp(46px, 11vw, 80px); }
+    .compare { padding: var(--sec) 0; }
+    .stats { padding: var(--sec) 0 calc(var(--sec) + 16px); }
+    .poster { padding: clamp(28px, 7vw, 44px) 0 var(--sec); }
+  }
+
   .display {
     font-family: var(--display); font-weight: 900; font-stretch: condensed;
     text-transform: uppercase; letter-spacing: -0.015em; line-height: 0.82; margin: 0;
@@ -105,14 +113,16 @@
 
   /* на узких экранах название остаётся, но ужимаются кегль, логотип и иконки */
   @media (max-width: 480px) {
-    .top .brand { font-size: 20px; gap: 9px; }
+    .top .brand { font-size: 19px; gap: 9px; }
     .logo { width: 32px; height: 32px; border-radius: 9px; }
-    .top-ico { gap: 8px; }
+    .top-ico { gap: 0; }              /* тап-зоны 44px соприкасаются краями — визуальный зазор внутри них */
+    .ico { min-width: 40px; }
     .ico svg { width: 20px; }
   }
   /* самые узкие экраны — название чуть меньше, чтобы не наехало на иконки */
   @media (max-width: 360px) {
-    .top .brand { font-size: 18px; }
+    .top .brand { font-size: 17px; }
+    .ico { min-width: 38px; }
     .ico svg { width: 19px; }
   }
 
@@ -122,6 +132,7 @@
   .ico {
     position: relative;
     display: grid; place-items: center;
+    min-width: 44px; min-height: 44px;   /* тап-зона по гайдлайнам, значок остаётся мелким */
     color: var(--red);
     text-decoration: none;
     transition: color .18s;
@@ -1044,6 +1055,7 @@
 
   .alt-tg {
     display: inline-flex; align-items: center; gap: 9px;
+    padding: 9px 2px;                  /* тап-зона ~40px по высоте */
     color: var(--red); text-decoration: none; border-bottom: 0;
     transition: color .18s, transform .2s cubic-bezier(.2,.9,.25,1);
   }
@@ -1368,7 +1380,7 @@
     font-size: clamp(14.5px, 1.5vw, 17px); font-weight: 700; letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums; word-break: break-word;
   }
-  .reqbox .req b a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, .4); transition: border-color .18s; }
+  .reqbox .req b a { display: inline-block; padding: 4px 0; color: inherit; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, .4); transition: border-color .18s; }
   .reqbox .req b a:hover { border-color: #fff; }
 
   .req-note {
@@ -1392,7 +1404,7 @@
   /* на тёмном фоне сплошная заливка сливалась с панелью — вторая кнопка в контуре */
   .dock .btn-ink { background: transparent; color: var(--ink); border-color: var(--ink); }
   .dock .btn-ink:hover { background: var(--ink); color: var(--bg); }
-  @media (max-width: 760px) { .dock { display: flex; } body { padding-bottom: 66px; } }
+  @media (max-width: 760px) { .dock { display: flex; } body { padding-bottom: 84px; } }
 
   /* базовое появление: плавное всплытие из лёгкого расфокуса */
   .reveal {
