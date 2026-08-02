@@ -1394,41 +1394,31 @@
   .dock .btn-ink:hover { background: var(--ink); color: var(--bg); }
   @media (max-width: 760px) { .dock { display: flex; } body { padding-bottom: 66px; } }
 
-  /* появление как капля, упавшая в воду: падение сверху, оседание, круги */
-  .reveal { position: relative; opacity: 0; }
-
-  .reveal.in { animation: drop .78s cubic-bezier(.22,.92,.28,1) both; }
-
-  @keyframes drop {
-    0%   { opacity: 0; transform: translateY(-30px) scale(1.035); }
-    52%  { opacity: 1; transform: translateY(5px)  scale(.994); }
-    76%  { transform: translateY(-3px) scale(1.002); }
-    90%  { transform: translateY(1px); }
-    100% { opacity: 1; transform: none; }
+  /* базовое появление: плавное всплытие из лёгкого расфокуса */
+  .reveal {
+    opacity: 0; transform: translateY(30px); filter: blur(8px);
+    transition: opacity .8s ease, transform .85s cubic-bezier(.2, .75, .2, 1), filter .8s ease;
+    will-change: opacity, transform, filter;
   }
+  .reveal.in { opacity: 1; transform: none; filter: blur(0); }
 
-  /* круг на воде расходится от места падения */
-  .reveal::after {
-    content: "";
-    position: absolute; left: 50%; top: 0;
-    width: min(46%, 420px); aspect-ratio: 7 / 1;
-    border: 2px solid var(--red);
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(.18);
-    opacity: 0;
-    pointer-events: none;
+  /* направленные варианты — задаются доп. классом на блоке */
+  .reveal.rv-left  { transform: translateX(-46px); }
+  .reveal.rv-right { transform: translateX(46px); }
+  .reveal.rv-zoom  { transform: scale(.9); }
+  .reveal.rv-left.in, .reveal.rv-right.in, .reveal.rv-zoom.in { transform: none; }
+
+  /* clip-раскрытие: контент «вытирается» сверху вниз (для акцентных блоков) */
+  .reveal.rv-clip {
+    opacity: 1; transform: none; filter: none;
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 1s cubic-bezier(.2, .8, .2, 1);
   }
-
-  .reveal.in::after { animation: ripple .95s cubic-bezier(.15,.7,.3,1) .16s both; }
-
-  @keyframes ripple {
-    0%   { opacity: .55; transform: translate(-50%, -50%) scale(.18); border-width: 2.5px; }
-    100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.75); border-width: .5px; }
-  }
+  .reveal.rv-clip.in { clip-path: inset(0 0 0 0); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    .reveal { opacity: 1; transform: none; }
+    .reveal { opacity: 1; transform: none; filter: none; clip-path: none; }
     /* без анимации эти элементы иначе остались бы невидимыми */
     .top .logo, .brand-name, .top-ico .ico, .top .go { opacity: 1; transform: none; }
     .top-ico .ico::after { display: none; }
@@ -1661,12 +1651,12 @@
   <!-- 4. ЗАЯВКА -->
   <section class="apply" id="zayavka">
     <div class="shell">
-      <div class="apply-head reveal">
+      <div class="apply-head reveal rv-left">
         <h2 class="display"><span>Расскажите</span><span>о компании</span></h2>
         <p>Достройте фразу — этого хватит, чтобы ответить по существу: интересна ли компания и на каких условиях.</p>
       </div>
 
-      <form class="card wiz reveal">
+      <form class="card wiz reveal rv-right">
         <!-- ловушка для спам-ботов: живой человек это поле не видит и не заполняет -->
         <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"
                style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
@@ -1854,7 +1844,7 @@
         </div>
       </div>
 
-      <div class="rail reveal">
+      <div class="rail reveal rv-right">
         <div class="rail-card">
           <span class="rail-n">1</span>
           <h3>Консультация</h3>
@@ -1887,7 +1877,7 @@
   <!-- 7. РАСХОДЫ -->
   <section class="money" id="rashody">
     <div class="shell money-in">
-      <div class="reveal">
+      <div class="reveal rv-left">
         <span class="kicker">Расходы</span>
         <h2 class="display">Нотариус за счёт покупателя</h2>
         <p>
@@ -1896,7 +1886,7 @@
         </p>
       </div>
 
-      <ul class="checks reveal">
+      <ul class="checks reveal rv-right">
         <li><i>01</i><span><b>Юрист ведёт сделку целиком</b> — от консультации до записи в ЕГРЮЛ</span></li>
         <li><i>02</i><span><b>Подготовка документов</b> на нашей стороне: решения, заявления, комплект к нотариусу</span></li>
         <li><i>03</i><span><b>Запись и сопровождение у нотариуса</b>, включая согласование даты</span></li>
