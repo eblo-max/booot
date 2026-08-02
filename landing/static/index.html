@@ -52,12 +52,9 @@
 
   .shell { max-width: var(--shell); margin-inline: auto; padding-inline: var(--gut); }
 
-  /* мобильный ритм: меньше «воздуха» между секциями + единое значение для всех */
+  /* мобильный ритм: меньше «воздуха» между секциями (единое --sec; спец-секции — в конце файла) */
   @media (max-width: 760px) {
     :root { --sec: clamp(46px, 11vw, 80px); }
-    .compare { padding: var(--sec) 0; }
-    .stats { padding: var(--sec) 0 calc(var(--sec) + 16px); }
-    .poster { padding: clamp(28px, 7vw, 44px) 0 var(--sec); }
   }
 
   .display {
@@ -1434,6 +1431,13 @@
     /* без анимации эти элементы иначе остались бы невидимыми */
     .top .logo, .brand-name, .top-ico .ico, .top .go { opacity: 1; transform: none; }
     .top-ico .ico::after { display: none; }
+  }
+
+  /* мобильный ритм для спец-секций — в конце, чтобы перекрыть их базовые правила */
+  @media (max-width: 760px) {
+    .compare { padding: var(--sec) 0; }
+    .stats { padding: var(--sec) 0 calc(var(--sec) + 16px); }
+    .poster { padding: clamp(28px, 7vw, 44px) 0 var(--sec); }
   }
 </style>
 
