@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, field_validator
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
@@ -84,6 +84,19 @@ def _cors_headers() -> dict[str, str]:
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(STATIC / "index.html")
+
+
+# Подтверждение прав в Яндекс.Вебмастере (HTML-файл в корне сайта)
+@app.get("/yandex_804531b747db83e0.html")
+async def yandex_verify() -> HTMLResponse:
+    return HTMLResponse(
+        '<html>\n'
+        '    <head>\n'
+        '        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n'
+        '    </head>\n'
+        '    <body>Verification: 804531b747db83e0</body>\n'
+        '</html>'
+    )
 
 
 @app.get("/health")
