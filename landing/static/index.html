@@ -1144,6 +1144,9 @@
   .crit-head { display: flex; flex-direction: column; gap: 14px; margin-bottom: clamp(30px, 4vw, 58px); max-width: 40ch; }
   .crit-head .kicker { color: var(--red); }
   .crit-head h2 { font-size: clamp(36px, 5.6vw, 82px); }
+  /* чуть больше интерлиньяжа у многострочных заголовков — ножки букв не налезают вниз */
+  .crit-head h2, .flow-head h2, .money-in h2, .faq-head h2 { line-height: .96; }
+  .poster h1 { line-height: .96; }
   .crit-head p { margin: 0; color: var(--ink-2); font-size: 16.5px; }
 
   .crit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(30px, 6vw, 100px); }
@@ -1166,10 +1169,10 @@
   .hot { margin-top: clamp(30px, 4vw, 50px); }
   .hot-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--red); margin-bottom: 14px; }
 
-  /* поле, по которому дрейфуют теги */
+  /* поле, по которому дрейфуют теги (высота с запасом, чтобы ряды не накладывались) */
   .hot ul {
     position: relative; list-style: none; margin: 0; padding: 0;
-    height: clamp(360px, 84vw, 420px);
+    height: clamp(430px, 112vw, 470px);
   }
 
   .hot li {
@@ -1195,7 +1198,7 @@
 
   @keyframes floatTag {
     0%, 100% { transform: translateY(0) rotate(var(--r)); }
-    50%      { transform: translateY(-14px) rotate(calc(var(--r) * -0.55)); }
+    50%      { transform: translateY(-10px) rotate(calc(var(--r) * -0.55)); }
   }
 
   .hot li:hover {
